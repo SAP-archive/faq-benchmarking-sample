@@ -1,0 +1,4 @@
+tqdm==4.23.2
+regex==2019.3.12
+requests==2.21.0
+pandas==0.25.3

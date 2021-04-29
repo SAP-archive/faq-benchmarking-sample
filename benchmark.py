@@ -19,16 +19,20 @@ LOGGER.addHandler(consoleHandler)
 
 LOGGER.setLevel(logging.INFO)
 
-API_ENDPOINT = 'https://api.cai.tools.sap/train/v2/request/ask'
-
+API_ENDPOINT    = 'https://api.cai.tools.sap/train/v2/request/ask'
 
 class Client:
 
-    def __init__(self, url, request_token, language):
+    def __init__(self, url, auth_url, client_id, client_secret, request_token, language):
         self.url = url
         self.headers = {"Authorization": "Token {}".format(request_token)}
         self.language = language
 
+        #oAuth Details
+        self.auth_url = auth_url
+        self.client_id = client_id
+        self.client_secret = client_secret
+        self.request_token = request_token
     def _prepare_payload(self, text):
         return {"text": text, "number_of_answers": 3, "language": self.language}
 
@@ -46,14 +50,37 @@ class Client:
             LOGGER.error(e)
 
     def call_api(self, payload):
-        response = requests.post(self.url, headers=self.headers, data=payload)
+        #Runtime API Details , generated under settings
+        oAuthPayload = {
+            "client_id": self.client_id,
+            "client_secret": self.client_secret,
+            "grant_type": "client_credentials"
+        }
+
+        oAuthHeaders = {
+            "Content-Type": "application/x-www-form-urlencoded"
+        }
+
+        #oAuth Token Request
+        oAuthResponse = requests.post(self.auth_url, data=oAuthPayload, headers=oAuthHeaders)
+        oAuthResponseJSON =  oAuthResponse.json()
+        oAuthToken = oAuthResponseJSON['access_token']
+        #Ask API Headers, Add tokens
+        askHeaders = {
+            "Authorization": "Bearer " + oAuthToken,
+            "X-Token" : "Token " + self.request_token,
+            "Content-Type" : "application/json"
+        }
+
+        response = requests.post(self.url, headers=askHeaders, data=json.dumps(payload))
         return response
+        
 
 
 class Benchmark(Client):
 
-    def __init__(self, url, request_token, csv_file, language="en"):
-        super().__init__(url, request_token, language)
+    def __init__(self, url, auth_url, client_id, client_secret, request_token, csv_file, language="en"):
+        super().__init__(url, auth_url, client_id, client_secret,  request_token, language)
         self.connect()
         self.data_df, self.questions, self.ground_truth_answers = self._load_csv(csv_file)
         self.preprocessed_answers = {}
@@ -145,7 +172,7 @@ if __name__ == "__main__":
     # Parse the arguments
     parser = argparse.ArgumentParser(
         prog='benchmark.py',
-        description="Allows benchmarking of gold dataset performance in a QnA bot"
+        description="Allows benchmarking of gold dataset performance in a QnA bot with OAuth tokens"
     )
     parser.add_argument(
         '--csv_file',
@@ -155,6 +182,37 @@ if __name__ == "__main__":
         help='CSV file with [question, answer] header',
         required=True
     )
+    #oAuth URL
+    parser.add_argument(
+        '--auth_url',
+        dest='auth_url',
+        metavar='AUTH_URL',
+        type=str,
+        help='The Auth URL generated under the Runtime API Details found in the bot settings on the platform.',
+        required=True
+    )
+
+    #client-id
+    parser.add_argument(
+        '--client_id',
+        dest='client_id',
+        metavar='CLIENT_ID',
+        type=str,
+        help='The client id generated under the Runtime API Details found in the bot settings on the platform.',
+        required=True
+    )
+
+    #client-secret
+    parser.add_argument(
+        '--client_secret',
+        dest='client_secret',
+        metavar='CLIENT_SECRET',
+        type=str,
+        help='The client secret generated under the Runtime API Details found in the bot settings on the platform.',
+        required=True
+    )
+
+
     parser.add_argument(
         '--request_token',
         dest='request_token',
@@ -163,16 +221,21 @@ if __name__ == "__main__":
         help='The Request Token can be found in the bot settings on the platform.',
         required=True
     )
+
     parser.add_argument(
         '--language',
         dest='language',
         metavar='LANGUAGE',
         default='en',
         type=str,
-        help='the predominant language of the questions and answers'
+        help='The predominant language of the questions and answers'
     )
+    
     args = parser.parse_args()
     b = Benchmark(url=API_ENDPOINT,
+                  auth_url=args.auth_url,
+                  client_id=args.client_id,
+                  client_secret=args.client_secret,
                   request_token=args.request_token, csv_file=args.csv_file, language=args.language)
 
     b.generate_report()

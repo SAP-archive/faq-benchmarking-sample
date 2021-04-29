@@ -50,8 +50,7 @@ class Client:
             LOGGER.error(e)
 
     def call_api(self, payload):
-        # Generate OAuth token
-        #Runtime API Details 
+        #Runtime API Details , generated under settings
         oAuthPayload = {
             "client_id": self.client_id,
             "client_secret": self.client_secret,
@@ -229,7 +228,7 @@ if __name__ == "__main__":
         metavar='LANGUAGE',
         default='en',
         type=str,
-        help='the predominant language of the questions and answers'
+        help='The predominant language of the questions and answers'
     )
     
     args = parser.parse_args()

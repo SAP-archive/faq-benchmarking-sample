@@ -43,6 +43,11 @@ The `benchmark.py` script is written in python3 and needs the gold dataset to be
 python3 benchmark.py --csv_file=assets/data/gold_test_data.csv --request_token=e6473e3bef5f0a9e2c98a47298e596e8 --language=en
 ```
 
+Run oAuth Support Changes using the below:
+```
+python3 benchmark.py --csv_file=assets/data/gold_test_data.csv --auth_url=<auth_url> --client_id=<client_id> --client_secret=<client_secret> --request_token=<request_token> --language=en
+```
+
 ![sample report](assets/img/report.jpg)
 
 ## Known Issues

@@ -19,7 +19,8 @@ LOGGER.addHandler(consoleHandler)
 
 LOGGER.setLevel(logging.INFO)
 
-API_ENDPOINT    = 'https://api.cai.tools.sap/train/v2/request/ask'
+API_ENDPOINT = 'https://api.cai.tools.sap/train/v2/request/ask'
+
 
 class Client:
 
@@ -51,10 +52,17 @@ class Client:
 
     def call_api(self, payload):
         # Generate OAuth token
+
+        #oAuth
+        oAuthURL = self.auth_url
+        clientID = self.client_id
+        clientSecret = self.client_secret
+        request_token = self.request_token
+
         #Runtime API Details 
         oAuthPayload = {
-            "client_id": self.client_id,
-            "client_secret": self.client_secret,
+            "client_id": clientID,
+            "client_secret": clientSecret,
             "grant_type": "client_credentials"
         }
 
@@ -62,18 +70,17 @@ class Client:
             "Content-Type": "application/x-www-form-urlencoded"
         }
 
-        #oAuth Token Request
-        oAuthResponse = requests.post(self.auth_url, data=oAuthPayload, headers=oAuthHeaders)
+        oAuthResponse = requests.post(oAuthURL, data=oAuthPayload, headers=oAuthHeaders)
         oAuthResponseJSON =  oAuthResponse.json()
         oAuthToken = oAuthResponseJSON['access_token']
-        #Ask API Headers, Add tokens
+
         askHeaders = {
             "Authorization": "Bearer " + oAuthToken,
-            "X-Token" : "Token " + self.request_token,
+            "X-Token" : "Token " + request_token,
             "Content-Type" : "application/json"
         }
 
-        response = requests.post(self.url, headers=askHeaders, data=json.dumps(payload))
+        response = requests.post(self.url, headers=self.askHeaders, data=payload)
         return response
         
 
@@ -81,7 +88,7 @@ class Client:
 class Benchmark(Client):
 
     def __init__(self, url, auth_url, client_id, client_secret, request_token, csv_file, language="en"):
-        super().__init__(url, auth_url, client_id, client_secret,  request_token, language)
+        super().__init__(url, request_token, language)
         self.connect()
         self.data_df, self.questions, self.ground_truth_answers = self._load_csv(csv_file)
         self.preprocessed_answers = {}
@@ -192,7 +199,6 @@ if __name__ == "__main__":
         help='The Auth URL generated under the Runtime API Details found in the bot settings on the platform.',
         required=True
     )
-
     #client-id
     parser.add_argument(
         '--client_id',
@@ -202,7 +208,6 @@ if __name__ == "__main__":
         help='The client id generated under the Runtime API Details found in the bot settings on the platform.',
         required=True
     )
-
     #client-secret
     parser.add_argument(
         '--client_secret',
@@ -212,8 +217,6 @@ if __name__ == "__main__":
         help='The client secret generated under the Runtime API Details found in the bot settings on the platform.',
         required=True
     )
-
-
     parser.add_argument(
         '--request_token',
         dest='request_token',
@@ -222,7 +225,6 @@ if __name__ == "__main__":
         help='The Request Token can be found in the bot settings on the platform.',
         required=True
     )
-
     parser.add_argument(
         '--language',
         dest='language',
@@ -231,7 +233,6 @@ if __name__ == "__main__":
         type=str,
         help='the predominant language of the questions and answers'
     )
-    
     args = parser.parse_args()
     b = Benchmark(url=API_ENDPOINT,
                   auth_url=args.auth_url,
